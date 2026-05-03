@@ -1,18 +1,13 @@
 {
-  "name": "PauliApp",
-  "short_name": "PauliApp",
-  "description": "PauliApp",
-  "start_url": "/",
-  "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "PauliApp",
   "orientation": "portrait",
-  "icons": [
-    {
-      "src": "/PauliCare_Logo.png",
-      "sizes": "500x500",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ]
+  "scope": "/",
+  "short_name": "Pauli",
+  "start_url": "https://pauliapp.netlify.app",
+  "theme_color": "#000000",
+  "description": "PauliCare App is part of the Pauli Ecosystem, design and thought through to provide the best support during palliative care situations. For Caregivers and Patients that are part of palliative care. Only use this application if indicated by your Healthcare Practicioner.",
+  "lang": "en"
 }
