@@ -1,6 +1,12 @@
 plugins {
   id 'com.android.application'
 }
+
+repositories {
+  google()
+  mavenCentral()
+}
+
 android {
   namespace 'com.pauliapp.app'
   compileSdk 34
