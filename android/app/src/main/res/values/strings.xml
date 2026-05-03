@@ -1,7 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PauliApp</string>
-    <string name="title_activity_main">PauliApp</string>
-    <string name="package_name">com.pauliapp.app</string>
-    <string name="custom_url_scheme">com.pauliapp.app</string>
+  <string name="app_name">PauliApp</string>
 </resources>
