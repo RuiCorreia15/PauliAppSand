@@ -21,27 +21,95 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Install Bubblewrap
-        run: npm install -g @bubblewrap/cli
-
-      - name: Accept all Bubblewrap prompts
+      - name: Create TWA Project
         run: |
-          echo "N" | bubblewrap init \
-            --manifest=https://pauliapp.netlify.app/manifest.json \
-            --directory=./android
+          mkdir -p android/app/src/main
+          cat > android/settings.gradle << 'GRADLE'
+          rootProject.name = "PauliApp"
+          include ':app'
+          GRADLE
 
-      - name: Build APK
+          cat > android/build.gradle << 'GRADLE'
+          buildscript {
+            repositories {
+              google()
+              mavenCentral()
+            }
+            dependencies {
+              classpath 'com.android.tools.build:gradle:8.1.0'
+            }
+          }
+          GRADLE
+
+          cat > android/app/build.gradle << 'GRADLE'
+          plugins {
+            id 'com.android.application'
+          }
+          android {
+            compileSdk 34
+            defaultConfig {
+              applicationId "com.pauliapp.app"
+              minSdk 21
+              targetSdk 34
+              versionCode 1
+              versionName "1.0"
+            }
+            buildTypes {
+              debug {
+                debuggable true
+              }
+            }
+          }
+          GRADLE
+
+          cat > android/app/src/main/AndroidManifest.xml << 'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <uses-permission android:name="android.permission.INTERNET" />
+            <application
+              android:label="PauliApp"
+              android:allowBackup="true">
+              <activity
+                android:name=".MainActivity"
+                android:exported="true">
+                <intent-filter>
+                  <action android:name="android.intent.action.MAIN" />
+                  <category android:name="android.intent.category.LAUNCHER" />
+                </intent-filter>
+              </activity>
+            </application>
+          </manifest>
+          XML
+
+          mkdir -p android/app/src/main/java/com/pauliapp/app
+          cat > android/app/src/main/java/com/pauliapp/app/MainActivity.java << 'JAVA'
+          package com.pauliapp.app;
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.net.Uri;
+          import android.os.Bundle;
+          public class MainActivity extends Activity {
+            @Override
+            protected void onCreate(Bundle savedInstanceState) {
+              super.onCreate(savedInstanceState);
+              Intent intent = new Intent(Intent.ACTION_VIEW);
+              intent.setData(Uri.parse("https://pauliapp.netlify.app"));
+              startActivity(intent);
+            }
+          }
+          JAVA
+
+      - name: Build Debug APK
         run: |
           cd android
-          echo "" | bubblewrap build --skipPwaValidation
+          chmod +x gradlew || true
+          gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: PauliApp-APK
-          path: android/*.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
