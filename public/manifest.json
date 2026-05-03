@@ -9,5 +9,17 @@
   "start_url": "https://pauliapp.netlify.app",
   "theme_color": "#000000",
   "description": "PauliCare App is part of the Pauli Ecosystem, design and thought through to provide the best support during palliative care situations. For Caregivers and Patients that are part of palliative care. Only use this application if indicated by your Healthcare Practicioner.",
-  "lang": "en"
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/PauliCare_Logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/PauliCare_Logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
