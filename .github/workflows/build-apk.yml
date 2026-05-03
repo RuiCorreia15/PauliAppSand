@@ -27,7 +27,7 @@ jobs:
       - name: Build Debug APK
         run: |
           cd android
-          gradle assembleDebug
+          gradle assembleDebug --warning-mode none
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
