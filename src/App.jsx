@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { initializeApp, getApps } from "firebase/app";
 import {
   getFirestore,
@@ -591,6 +591,62 @@ function Btn({
   );
 }
 
+/* Fills the available screen space and, if the content is taller than that
+   space, scales it down so the whole screen is visible without scrolling. */
+function FitToScreen({ children, style = {}, innerStyle = {} }) {
+  const outerRef = useRef(null);
+  const innerRef = useRef(null);
+  const [scale, setScale] = useState(1);
+
+  useLayoutEffect(() => {
+    const outer = outerRef.current;
+    const inner = innerRef.current;
+    if (!outer || !inner) return;
+    const measure = () => {
+      const cs = getComputedStyle(outer);
+      const available =
+        outer.clientHeight -
+        parseFloat(cs.paddingTop) -
+        parseFloat(cs.paddingBottom);
+      const natural = inner.offsetHeight;
+      setScale(natural > available && natural > 0 ? available / natural : 1);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(outer);
+    ro.observe(inner);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={outerRef}
+      style={{
+        height: "100%",
+        overflow: "hidden",
+        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        ...style,
+      }}
+    >
+      <div
+        ref={innerRef}
+        style={{
+          width: "100%",
+          flexShrink: 0,
+          transform: scale < 1 ? `scale(${scale})` : "none",
+          transformOrigin: "top center",
+          ...innerStyle,
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function Card({ children, style = {}, onClick }) {
   return (
     <div
@@ -778,22 +834,23 @@ function SplashScreen({ onLogin }) {
   };
 
   return (
-    <div
+    <FitToScreen
       style={{
-        minHeight: "100vh",
         background: `linear-gradient(160deg, ${T.blueLt} 0%, ${T.white} 50%, ${T.yellowLt} 100%)`,
+        justifyContent: "center",
+        padding: "24px 24px",
+      }}
+      innerStyle={{
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        padding: "40px 28px",
       }}
     >
       {/* Logo card */}
       <div
         style={{
-          width: 110,
-          height: 110,
+          width: 92,
+          height: 92,
           background: T.white,
           borderRadius: 32,
           display: "flex",
@@ -801,19 +858,20 @@ function SplashScreen({ onLogin }) {
           justifyContent: "center",
           boxShadow:
             "0 6px 32px rgba(58,124,195,0.18), 0 2px 8px rgba(0,0,0,0.06)",
-          marginBottom: 28,
+          marginBottom: 20,
+          flexShrink: 0,
         }}
       >
-        <Logo size={72} />
+        <Logo size={60} />
       </div>
 
       {/* App name */}
       <h1
         style={{
           fontFamily: T.serif,
-          fontSize: 40,
+          fontSize: 36,
           color: T.text,
-          margin: "0 0 8px",
+          margin: "0 0 6px",
           lineHeight: 1.1,
           textAlign: "center",
         }}
@@ -829,7 +887,7 @@ function SplashScreen({ onLogin }) {
           color: T.sub,
           lineHeight: 1.6,
           textAlign: "center",
-          margin: "0 0 36px",
+          margin: "0 0 24px",
           maxWidth: 280,
           whiteSpace: "pre-line",
           minHeight: 48,
@@ -844,7 +902,7 @@ function SplashScreen({ onLogin }) {
         style={{
           width: "100%",
           maxWidth: 320,
-          marginBottom: 28,
+          marginBottom: 20,
         }}
       >
         <p
@@ -877,7 +935,7 @@ function SplashScreen({ onLogin }) {
                 flexDirection: "column",
                 alignItems: "center",
                 gap: 6,
-                padding: "14px 8px",
+                padding: "10px 6px",
                 borderRadius: 16,
                 border: `2px solid ${lang === l.code ? T.blue : T.border}`,
                 background: lang === l.code ? T.blueLt : T.white,
@@ -945,14 +1003,14 @@ function SplashScreen({ onLogin }) {
           fontFamily: T.sans,
           fontSize: 11,
           color: T.sub,
-          marginTop: 20,
+          margin: "16px 0 0",
           textAlign: "center",
-          lineHeight: 1.6,
+          lineHeight: 1.5,
         }}
       >
         {t("confidential")}
       </p>
-    </div>
+    </FitToScreen>
   );
 }
 
@@ -1266,7 +1324,7 @@ function Onboarding({ onComplete, sosMeds }) {
       style={{
         maxWidth: 420,
         margin: "0 auto",
-        height: "100vh",
+        height: "100%",
         overflow: "hidden",
         position: "relative",
         background: T.bg,
@@ -1299,20 +1357,15 @@ function Home({ go, events, sosMeds }) {
   ];
 
   return (
-    <div
-      style={{
-        padding: "20px 18px 90px",
-        overflowX: "hidden",
-        boxSizing: "border-box",
-      }}
-    >
+    /* Bottom padding leaves room for the fixed BottomNav */
+    <FitToScreen style={{ padding: "16px 18px 76px" }}>
       {/* Header */}
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 20,
+          marginBottom: 14,
         }}
       >
         <div>
@@ -1355,7 +1408,7 @@ function Home({ go, events, sosMeds }) {
           display: "grid",
           gridTemplateColumns: "1fr 1fr 1fr",
           gap: 10,
-          marginBottom: 18,
+          marginBottom: 14,
         }}
       >
         {[
@@ -1390,7 +1443,7 @@ function Home({ go, events, sosMeds }) {
             style={{
               background: T.white,
               borderRadius: 18,
-              padding: "12px 8px",
+              padding: "10px 6px",
               boxShadow: "0 1px 8px rgba(58,124,195,0.08)",
               border: `1px solid ${T.border}`,
               textAlign: "center",
@@ -1437,11 +1490,11 @@ function Home({ go, events, sosMeds }) {
         style={{
           background: `linear-gradient(120deg, ${T.red}, #C93A3A)`,
           borderRadius: 18,
-          padding: "14px 16px",
+          padding: "12px 16px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 18,
+          marginBottom: 14,
         }}
       >
         <div>
@@ -1512,7 +1565,8 @@ function Home({ go, events, sosMeds }) {
               display: "flex",
               alignItems: "center",
               gap: 12,
-              marginBottom: 10,
+              marginBottom: 8,
+              padding: "10px 14px",
               cursor: "pointer",
               overflow: "hidden",
             }}
@@ -1557,13 +1611,13 @@ function Home({ go, events, sosMeds }) {
         );
       })}
 
-      <div style={{ marginTop: 14 }}>
+      <div style={{ marginTop: 10 }}>
         <Btn variant="ghost" onClick={() => go("symptoms")}>
           {t("logSymptom")}
         </Btn>
       </div>
 
-      <div style={{ marginTop: 10 }}>
+      <div style={{ marginTop: 8 }}>
         <Btn
           variant="ghost"
           onClick={() => go("criticalmodal")}
@@ -1572,7 +1626,7 @@ function Home({ go, events, sosMeds }) {
           {t("communicateCritical")}
         </Btn>
       </div>
-    </div>
+    </FitToScreen>
   );
 }
 
@@ -3285,7 +3339,7 @@ export default function App() {
     loading: (
       <div
         style={{
-          height: "100vh",
+          height: "100%",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -3334,11 +3388,14 @@ export default function App() {
         style={{
           maxWidth: 420,
           margin: "0 auto",
-          minHeight: "100vh",
+          height: "100%" /* locked to the viewport; screens scroll inside */,
           background: T.bg,
           position: "relative",
           overflowX:
             "hidden" /* prevent ANY child from causing horizontal scroll */,
+          overflowY: "auto",
+          overscrollBehavior: "contain",
+          WebkitOverflowScrolling: "touch",
           boxSizing: "border-box",
         }}
       >
