@@ -88,6 +88,13 @@ async function writeEvent(type, payload) {
       }
       if (type === "critical_event") {
         updates.criticalEvents = (d.criticalEvents || 0) + 1;
+        updates.lastCriticalEvent = {
+          eventType: payload.eventType,
+          eventTypeLabel: payload.eventTypeLabel,
+          eventDate: payload.eventDate,
+          eventTime: payload.eventTime,
+          eventAt: payload.eventAt,
+        };
       }
       await setDoc(ref, updates, { merge: true });
     } catch (e) {
@@ -263,6 +270,7 @@ const TRANSLATIONS = {
     timeLbl: "Time",
     saveCriticalEvent: "Save Critical Event",
     criticalLogged: "✓ Critical event logged!",
+    criticalSaveFailed: "Could not save to Firebase. Please try again.",
   },
   pt: {
     tagline: "O seu companheiro de saúde pessoal,\nsempre ao seu lado.",
@@ -385,6 +393,7 @@ const TRANSLATIONS = {
     timeLbl: "Hora",
     saveCriticalEvent: "Guardar Evento Crítico",
     criticalLogged: "✓ Evento crítico registado!",
+    criticalSaveFailed: "Não foi possível guardar no Firebase. Tente novamente.",
   },
   pl: {
     tagline: "Twój osobisty towarzysz zdrowia,\nzawsze przy Tobie.",
@@ -507,6 +516,7 @@ const TRANSLATIONS = {
     timeLbl: "Godzina",
     saveCriticalEvent: "Zapisz zdarzenie krytyczne",
     criticalLogged: "✓ Zdarzenie krytyczne zapisane!",
+    criticalSaveFailed: "Nie udało się zapisać w Firebase. Spróbuj ponownie.",
   },
 };
 
@@ -1587,6 +1597,7 @@ function CriticalEventModal({ go, onConfirm }) {
   const [time, setTime] = useState(`${pad(now.getHours())}:${pad(now.getMinutes())}`);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState(false);
 
   const inputStyle = {
     width: "100%",
@@ -1611,13 +1622,15 @@ function CriticalEventModal({ go, onConfirm }) {
   const handleSave = async () => {
     if (!eventType || !date || !time || saving) return;
     setSaving(true);
-    try {
-      await onConfirm(eventType, date, time);
-    } catch (err) {
-      console.warn("Critical event save error:", err.message);
-    } finally {
+    setError(false);
+    const ok = await onConfirm(eventType, date, time);
+    if (ok) {
       setSaved(true);
       setTimeout(() => go("home"), 800);
+    } else {
+      // Keep the modal open so the patient can retry
+      setSaving(false);
+      setError(true);
     }
   };
 
@@ -1735,6 +1748,20 @@ function CriticalEventModal({ go, onConfirm }) {
             />
           </label>
         </div>
+
+        {error && (
+          <p
+            style={{
+              fontFamily: T.sans,
+              fontSize: 12,
+              fontWeight: 600,
+              color: T.red,
+              margin: "16px 0 0",
+            }}
+          >
+            {t("criticalSaveFailed")}
+          </p>
+        )}
 
         <div style={{ display: "grid", gap: 8, marginTop: 20 }}>
           <Btn
@@ -3194,7 +3221,8 @@ export default function App() {
     };
   }, []);
 
-  /* Wrap Firebase writes with saving indicator + hard 10s timeout */
+  /* Wrap Firebase writes with saving indicator + hard 10s timeout.
+     Resolves to true if the write succeeded, false otherwise. */
   const withSave = async (fn) => {
     setSaving(true);
     try {
@@ -3206,9 +3234,11 @@ export default function App() {
           setTimeout(() => reject(new Error("Firebase timeout")), 10000)
         ),
       ]);
+      return true;
     } catch (err) {
       console.error("Firebase write error:", err.message);
       // Don't rethrow - let the UI recover gracefully
+      return false;
     } finally {
       setSaving(false);
     }
@@ -3221,14 +3251,21 @@ export default function App() {
   const handleLogSymptom = (symptom, severity) =>
     withSave(() => writeEvent("symptom", { symptom, severity }));
   const handleCriticalEvent = (eventType, eventDate, eventTime) =>
-    withSave(() =>
-      writeEvent("critical_event", {
+    withSave(() => {
+      const et = CRITICAL_EVENT_TYPES.find((x) => x.id === eventType);
+      const at = new Date(`${eventDate}T${eventTime}`);
+      // Store everything shown in the modal, with a readable label so the
+      // care team can understand the record without the app's lookup table
+      return writeEvent("critical_event", {
         eventType,
+        eventTypeLabel: et ? TRANSLATIONS.en[et.key] : eventType,
         eventDate,
         eventTime,
-        eventAt: new Date(`${eventDate}T${eventTime}`).toISOString(),
-      })
-    );
+        eventAt: isNaN(at.getTime()) ? null : at.toISOString(),
+        reportedAt: new Date().toISOString(),
+        lang,
+      });
+    });
   const handleOnboarding = () =>
     withSave(async () => {
       await ensurePatientDoc();
