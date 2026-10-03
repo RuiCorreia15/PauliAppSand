@@ -86,6 +86,9 @@ async function writeEvent(type, payload) {
           ((prevAvg * prevN + (payload.severity || 0)) / (prevN + 1)).toFixed(1)
         );
       }
+      if (type === "critical_event") {
+        updates.criticalEvents = (d.criticalEvents || 0) + 1;
+      }
       await setDoc(ref, updates, { merge: true });
     } catch (e) {
       console.warn("Counter update failed (non-critical):", e.message);
@@ -247,6 +250,19 @@ const TRANSLATIONS = {
     sosMedStep: "Step 1 of 3 · SOS Medication",
     linkedSymsCount: "linked symptoms",
     connecting: "Connecting…",
+    communicateCritical: "⚠️ Communicate critical event",
+    criticalEvent: "Critical Event",
+    criticalEventDesc: "Let your care team know about an unexpected event.",
+    eventType: "Type of event",
+    emergencyVisit: "Emergency visit",
+    hospitalOvernight: "Hospital overnight stay",
+    unscheduledAppointment: "Non-scheduled medical appointment",
+    patientFall: "Patient fall",
+    whenHappened: "When did it happen?",
+    dateLbl: "Date",
+    timeLbl: "Time",
+    saveCriticalEvent: "Save Critical Event",
+    criticalLogged: "✓ Critical event logged!",
   },
   pt: {
     tagline: "O seu companheiro de saúde pessoal,\nsempre ao seu lado.",
@@ -356,6 +372,19 @@ const TRANSLATIONS = {
     sosMedStep: "Passo 1 de 3 · Medicação SOS",
     linkedSymsCount: "sintomas associados",
     connecting: "A ligar…",
+    communicateCritical: "⚠️ Comunicar evento crítico",
+    criticalEvent: "Evento Crítico",
+    criticalEventDesc: "Informe a sua equipa de cuidados sobre um evento inesperado.",
+    eventType: "Tipo de evento",
+    emergencyVisit: "Ida às urgências",
+    hospitalOvernight: "Internamento hospitalar (noite)",
+    unscheduledAppointment: "Consulta médica não agendada",
+    patientFall: "Queda do paciente",
+    whenHappened: "Quando aconteceu?",
+    dateLbl: "Data",
+    timeLbl: "Hora",
+    saveCriticalEvent: "Guardar Evento Crítico",
+    criticalLogged: "✓ Evento crítico registado!",
   },
   pl: {
     tagline: "Twój osobisty towarzysz zdrowia,\nzawsze przy Tobie.",
@@ -465,6 +494,19 @@ const TRANSLATIONS = {
     sosMedStep: "Krok 1 z 3 · Lek SOS",
     linkedSymsCount: "powiązane objawy",
     connecting: "Łączenie…",
+    communicateCritical: "⚠️ Zgłoś zdarzenie krytyczne",
+    criticalEvent: "Zdarzenie krytyczne",
+    criticalEventDesc: "Poinformuj zespół opieki o nieoczekiwanym zdarzeniu.",
+    eventType: "Rodzaj zdarzenia",
+    emergencyVisit: "Wizyta na SOR",
+    hospitalOvernight: "Nocny pobyt w szpitalu",
+    unscheduledAppointment: "Nieplanowana wizyta lekarska",
+    patientFall: "Upadek pacjenta",
+    whenHappened: "Kiedy to się stało?",
+    dateLbl: "Data",
+    timeLbl: "Godzina",
+    saveCriticalEvent: "Zapisz zdarzenie krytyczne",
+    criticalLogged: "✓ Zdarzenie krytyczne zapisane!",
   },
 };
 
@@ -1509,6 +1551,210 @@ function Home({ go, events, sosMeds }) {
         <Btn variant="ghost" onClick={() => go("symptoms")}>
           {t("logSymptom")}
         </Btn>
+      </div>
+
+      <div style={{ marginTop: 10 }}>
+        <Btn
+          variant="ghost"
+          onClick={() => go("criticalmodal")}
+          style={{ color: T.red, border: `1.5px solid ${T.red}` }}
+        >
+          {t("communicateCritical")}
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   CRITICAL EVENT MODAL
+══════════════════════════════════════════════════════════ */
+const CRITICAL_EVENT_TYPES = [
+  { id: "emergency_visit", icon: "🚑", key: "emergencyVisit" },
+  { id: "hospital_overnight", icon: "🏥", key: "hospitalOvernight" },
+  { id: "unscheduled_appointment", icon: "🩺", key: "unscheduledAppointment" },
+  { id: "patient_fall", icon: "⚠️", key: "patientFall" },
+];
+
+function CriticalEventModal({ go, onConfirm }) {
+  const { t } = useLang();
+  const pad = (n) => String(n).padStart(2, "0");
+  const now = new Date();
+  const [eventType, setEventType] = useState(null);
+  const [date, setDate] = useState(
+    `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+  );
+  const [time, setTime] = useState(`${pad(now.getHours())}:${pad(now.getMinutes())}`);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const inputStyle = {
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "11px 12px",
+    borderRadius: 12,
+    border: `1.5px solid ${T.border}`,
+    fontFamily: T.sans,
+    fontSize: 14,
+    color: T.text,
+    background: T.bg,
+  };
+  const labelStyle = {
+    fontFamily: T.sans,
+    fontSize: 11,
+    fontWeight: 700,
+    color: T.sub,
+    display: "block",
+    marginBottom: 4,
+  };
+
+  const handleSave = async () => {
+    if (!eventType || !date || !time || saving) return;
+    setSaving(true);
+    try {
+      await onConfirm(eventType, date, time);
+    } catch (err) {
+      console.warn("Critical event save error:", err.message);
+    } finally {
+      setSaved(true);
+      setTimeout(() => go("home"), 800);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 500,
+        background: "rgba(18,28,42,0.6)",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "flex-end",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        onClick={saving ? undefined : () => go("home")}
+        style={{ position: "absolute", inset: 0 }}
+      />
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          background: T.white,
+          borderRadius: "24px 24px 0 0",
+          padding: "22px 20px 36px",
+          maxWidth: 420,
+          width: "100%",
+          margin: "0 auto",
+          boxSizing: "border-box",
+          maxHeight: "90vh",
+          overflowY: "auto",
+        }}
+      >
+        <div
+          style={{
+            width: 36,
+            height: 4,
+            background: T.border,
+            borderRadius: 999,
+            margin: "0 auto 18px",
+          }}
+        />
+        <h3
+          style={{
+            fontFamily: T.serif,
+            fontSize: 22,
+            color: T.red,
+            margin: 0,
+          }}
+        >
+          ⚠️ {t("criticalEvent")}
+        </h3>
+        <p
+          style={{
+            fontFamily: T.sans,
+            fontSize: 12,
+            color: T.sub,
+            margin: "4px 0 0",
+          }}
+        >
+          {t("criticalEventDesc")}
+        </p>
+
+        <SectionLabel>{t("eventType")}</SectionLabel>
+        <div style={{ display: "grid", gap: 8 }}>
+          {CRITICAL_EVENT_TYPES.map((et) => {
+            const sel = eventType === et.id;
+            return (
+              <button
+                key={et.id}
+                onClick={() => setEventType(et.id)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "11px 14px",
+                  borderRadius: 13,
+                  border: `1.5px solid ${sel ? T.red : T.border}`,
+                  background: sel ? T.redLt : T.white,
+                  color: sel ? T.red : T.text,
+                  fontFamily: T.sans,
+                  fontWeight: 600,
+                  fontSize: 14,
+                  textAlign: "left",
+                  cursor: "pointer",
+                }}
+              >
+                <span style={{ fontSize: 18 }}>{et.icon}</span>
+                {t(et.key)}
+              </button>
+            );
+          })}
+        </div>
+
+        <SectionLabel>{t("whenHappened")}</SectionLabel>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <label>
+            <span style={labelStyle}>{t("dateLbl")}</span>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              style={inputStyle}
+            />
+          </label>
+          <label>
+            <span style={labelStyle}>{t("timeLbl")}</span>
+            <input
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              style={inputStyle}
+            />
+          </label>
+        </div>
+
+        <div style={{ display: "grid", gap: 8, marginTop: 20 }}>
+          <Btn
+            variant={saved ? "primary" : "danger"}
+            disabled={!eventType || !date || !time || (saving && !saved)}
+            onClick={handleSave}
+            style={saved ? { background: T.green } : {}}
+          >
+            {saved
+              ? t("criticalLogged")
+              : saving
+              ? t("saving")
+              : t("saveCriticalEvent")}
+          </Btn>
+          {!saving && (
+            <Btn variant="softgray" onClick={() => go("home")}>
+              {t("cancel")}
+            </Btn>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -2974,6 +3220,15 @@ export default function App() {
     withSave(() => writeEvent("sos", { medName, dose, symptom, severity }));
   const handleLogSymptom = (symptom, severity) =>
     withSave(() => writeEvent("symptom", { symptom, severity }));
+  const handleCriticalEvent = (eventType, eventDate, eventTime) =>
+    withSave(() =>
+      writeEvent("critical_event", {
+        eventType,
+        eventDate,
+        eventTime,
+        eventAt: new Date(`${eventDate}T${eventTime}`).toISOString(),
+      })
+    );
   const handleOnboarding = () =>
     withSave(async () => {
       await ensurePatientDoc();
@@ -3058,6 +3313,11 @@ export default function App() {
         {/* SOS Modal — fixed overlay, always on top, never clipped */}
         {screen === "sosmodal" && (
           <SOSModal go={setScreen} onConfirmSOS={handleSOS} sosMeds={sosMeds} />
+        )}
+
+        {/* Critical event modal — fixed overlay over the home screen */}
+        {screen === "criticalmodal" && (
+          <CriticalEventModal go={setScreen} onConfirm={handleCriticalEvent} />
         )}
 
         {showNav && (
