@@ -534,8 +534,8 @@ const useLang = () => useContext(LangContext);
 function Logo({ size = 36 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100">
-      <circle cx="38" cy="50" r="32" fill={T.blue} />
-      <path d="M50 18 A32 32 0 0 1 50 82 Z" fill={T.yellow} />
+      <path d="M50 33.33 A33.33 33.33 0 0 0 50 100 Z" fill="#2A3DB7" />
+      <path d="M50 0 A33.33 33.33 0 0 1 50 66.67 Z" fill="#FFE25A" />
     </svg>
   );
 }
