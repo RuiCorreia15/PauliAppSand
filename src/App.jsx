@@ -140,7 +140,7 @@ if (!document.getElementById("pc-fonts")) {
 const TRANSLATIONS = {
   en: {
     // Splash
-    tagline: "Your personal health companion,\nalways by your side.",
+    tagline: "Always by your side",
     signIn: "Sign In",
     confidential: "PauliCare · Confidential health data",
     chooseLanguage: "Choose your language",
@@ -273,7 +273,7 @@ const TRANSLATIONS = {
     criticalSaveFailed: "Could not save to Firebase. Please try again.",
   },
   pt: {
-    tagline: "O seu companheiro de saúde pessoal,\nsempre ao seu lado.",
+    tagline: "Sempre ao seu lado",
     signIn: "Entrar",
     confidential: "PauliCare · Dados de saúde confidenciais",
     chooseLanguage: "Escolha o seu idioma",
@@ -396,7 +396,7 @@ const TRANSLATIONS = {
     criticalSaveFailed: "Não foi possível guardar no Firebase. Tente novamente.",
   },
   pl: {
-    tagline: "Twój osobisty towarzysz zdrowia,\nzawsze przy Tobie.",
+    tagline: "Zawsze przy Tobie",
     signIn: "Zaloguj się",
     confidential: "PauliCare · Poufne dane zdrowotne",
     chooseLanguage: "Wybierz język",
